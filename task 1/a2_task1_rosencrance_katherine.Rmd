@@ -1,0 +1,232 @@
+---
+title: "Assignment 2 Task 1 - Florida Palmetto Exploration"
+author: "Katherine Rosencrance"
+date: "2023-02-12"
+output:
+  html_document:
+      code_folding: hide
+---
+# Overview
+
+# Setup
+```{r setup, echo = TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Attach packages
+library(tidyverse)
+library(here)
+library(GGally)
+library(broom)
+library(AICcmodavg)
+library(kableExtra)
+library(tidymodels)
+
+```
+
+```{r}
+# Read in the data
+palmetto <- read_csv(here("data", "palmetto.csv"))
+```
+
+# Data Visualization and Analysis
+Exploring differences in height, canopy length, canopy width, and green leaves for the two species.
+```{r}
+# Rename the 1 and 2 species codes to the actual species names
+palmetto <- palmetto %>% 
+   mutate(species = case_when(species == "1" ~ "Serenoa repens",
+    species == "2" ~ "Sabal etonia"))
+
+# Create a subset with the data we need
+ palmetto_subset <- palmetto %>% 
+   select(species, height:green_lvs)
+ 
+# Convert species to a factor, check to make sure it worked
+palmetto_subset$species <- as.factor(palmetto_subset$species)
+class(palmetto_subset$species)
+levels(palmetto_subset$species)
+
+# Note that Sabel etonia (0) is before Serenoa repens (1)
+
+```
+
+Checking out trends across variables for the two species.
+```{r}
+
+# use ggpairs to view variables
+# ggpairs(palmetto_subset, aes(color = species))
+
+
+# Detailed graphs for some variables
+height_length_plot <- ggplot(data = palmetto_subset, aes(x = height, y = length)) +
+  geom_point(aes(color = species), show.legend = FALSE) +
+  facet_wrap(~species)+
+  theme_minimal()+
+  labs( x = "Height (cm)",
+        y = "Canopy Length (cm)",
+        title = "Height and Canopy Length of Palmetto Species",
+        subtitle = "1981-2017")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+        plot.subtitle = element_text(hjust = 0.5, face = "bold", size = 11),
+        axis.title.x = element_text(vjust = 0.2, face = "bold", size = 10),
+        axis.title.y = element_text(face = "bold", size = 10),
+        axis.text = element_text(size = 8),
+        plot.background = element_rect(fill = "white"))+
+  scale_color_manual(values = c("darkgreen", "lightgreen"))
+
+  height_length_plot
+```
+
+**Figure 1: Height vs. Canopy Length of Palmetto Species.** Height and canopy length in centimeters of two different Palmetto species, *Sabel etonia* (dark green) and *Serenoa repens* (light green).
+
+```{r}
+height_width_plot <- ggplot(data = palmetto_subset, aes(x = height, y = width)) +
+  geom_point(aes(color = species), show.legend = FALSE) +
+  facet_wrap(~species)+
+  theme_minimal()+
+  labs( x = "Height (cm)",
+        y = "Canopy Width (cm)",
+        title = "Height and Canopy Width of Palmetto Species",
+        subtitle = "1981-2017")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+        plot.subtitle = element_text(hjust = 0.5, face = "bold", size = 11),
+        axis.title.x = element_text(vjust = 0.2, face = "bold", size = 10),
+        axis.title.y = element_text(face = "bold", size = 10),
+        axis.text = element_text(size = 8),
+        plot.background = element_rect(fill = "white"))+
+  scale_color_manual(values = c("darkgreen", "lightgreen"))
+
+height_width_plot
+```
+
+**Figure 2: Height vs. Canopy Width of Palmetto Species.** Height and canopy width in centimeters of two different Palmetto species, *Sabel etonia* (dark green) and *Serenoa repens* (light green).
+
+```{r}
+height_lvs_plot <- ggplot(data = palmetto_subset, aes(x = height, y = green_lvs)) +
+  geom_point(aes(color = species), show.legend = FALSE) +
+  facet_wrap(~species)+
+  labs( x = "Height (cm)",
+        y = "Count of Green Leaves",
+        title = "Height and Count of Green Leaves of Palmetto Species",
+        subtitle = "1981-2017")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+        plot.subtitle = element_text(hjust = 0.5, face = "bold", size = 11),
+        axis.title.x = element_text(vjust = 0.2, face = "bold", size = 10),
+        axis.title.y = element_text(face = "bold", size = 10),
+        axis.text = element_text(size = 8),
+        plot.background = element_rect(fill = "white"))+
+  scale_color_manual(values = c("darkgreen", "lightgreen"))
+
+height_lvs_plot
+```
+
+**Figure 3: Height vs. Green Leaf Count of Palmetto Species.** Height in centimeters and green leaf count of two different Palmetto species, *Sabel etonia* (dark green) and *Serenoa repens* (light green).
+
+Based on the plots above, and the visible difference between the two species, one could see that the count of green leaves would have the highest likelihood of classifying species correctly. Canopy length, width, and height are all fairly similar across the two species, however, length may be slightly better in predicting species.
+
+# Binary Logistic Regression
+```{r}
+# Log odds of plant type using plant height, canopy length, canopy width and green leaves as predictor variable.
+f1 <- species ~ height + length + width + green_lvs
+
+palmetto_blr1 <- glm(formula = f1,
+                    data = palmetto_subset,
+                    family = "binomial")
+
+# Log odds of plant type using plant height, canopy width and green leaves
+f2 <- species ~ height + width + green_lvs
+
+palmetto_blr2 <- glm(formula = f2,
+                    data = palmetto_subset,
+                    family = "binomial")
+
+tidy(palmetto_blr1)
+tidy(palmetto_blr2)
+```
+
+
+
+```{r}
+# AIC and BIC
+aictab(list(palmetto_blr1, palmetto_blr2)) %>% 
+    kable(col.names = c("Model", "Parameters", "AIC", "Delta AIC", "Model Likelihood", "AIC Weight", "Log Likelihood", "Cumulative Weight"),
+        caption = "Table 1: AIC Results") %>% 
+  kable_classic(position = "center")
+
+bictab(list(palmetto_blr1, palmetto_blr2)) %>% 
+    kable(col.names = c("Model", "Parameters", "BIC", "Delta BIC", "Model Likelihood", "BIC Weight", "Log Likelihood", "Cumulative Weight"),
+        caption = "Table 2: BIC Results") %>% 
+  kable_classic(position = "center")
+```
+
+```{r}
+# 10 fold cross validation
+## set seed for reproducibility! here to set the folds
+set.seed(345)
+
+tidy_folds <- vfold_cv(palmetto_subset, v = 10)
+tidy_folds
+
+## use a workflow that bundles the logistic model and a formula
+ blr_model <- logistic_reg() %>%
+   set_engine('glm')
+
+blr_tidy_wf1 <- workflow() %>%
+  add_model(blr_model) %>%
+  add_formula(f1)
+
+blr_tidy_cv_f1 <- blr_tidy_wf1 %>%
+  fit_resamples(tidy_folds)
+
+## use functions from the tune package to extract metrics
+metrics1<- collect_metrics(blr_tidy_cv_f1)
+metrics1
+
+## accuracy is 0.9168 for model 1
+
+
+## Repeat for model 2 
+blr_tidy_wf2 <- workflow() %>%
+  add_model(blr_model) %>%
+  add_formula(f2)
+
+blr_tidy_cv_f2 <- blr_tidy_wf2 %>%
+  fit_resamples(tidy_folds)
+
+## use functions from the tune package to extract metrics
+metrics2<- collect_metrics(blr_tidy_cv_f2)
+
+## accuracy is 0.8988 for model 2
+
+```
+
+Based on the AIC and BIC values, as well as the 10-fold cross validation, model 1 performs better. The AIC and BIC for model 1 were lower and the mean accuracy metric was `r round(metrics1[1,3], 5)` compared to `r round(metrics2[1,3], 5)` for model 2. 
+
+```{r}
+# use the entire dataset, rather than testing/training sets, to identify the coefficients for the final predictive model, based on model 1 (lowest AIC and BIC)
+
+```
+
+```{r}
+# But log odds are challenging to interpret. Let's find actual *probabilities* associated with a palmetto being S etonia or S repens, based on model 1
+blr1_fitted <- palmetto_blr1 %>%
+  broom::augment(type.predict = "response") %>% 
+  
+# add columns to see if the model correctly guessed the species
+  
+  mutate(species_predicted= case_when(.fitted >= 0.5 ~ "Serenoa repens",
+         TRUE ~ "Sabal etonia")) %>% 
+  mutate(correct_prediction= case_when(species == species_predicted ~ "yes",
+                                        TRUE ~ "no"))
+
+#create table
+palmetto_table <- blr1_fitted %>% 
+  select(species, correct_prediction) %>% 
+  pivot_wider(names_from = correct_prediction, values_from = correct_prediction, values_fn = list(correct_prediction = length)) %>% 
+  mutate(percent_correctly_classified= yes/(yes+no)*100)
+ palmetto_table
+
+```
+
+
+# Citation
+**Data Citation:** Abrahamson, W.G. 2019. Survival, growth and biomass estimates of two dominant palmetto species of south-central Florida from 1981 - 2017, ongoing at 5-year intervals ver 1. Environmental Data Initiative. https://doi.org/10.6073/pasta/f2f96ec76fbbd4b9db431c79a770c4d5

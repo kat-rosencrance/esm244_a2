@@ -1,0 +1,10 @@
+---
+title: "Assignment 2 Task 1 - Florida Palmetto Exploration"
+author: "Katherine Rosencrance"
+date: "2023-02-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
