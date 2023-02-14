@@ -1,0 +1,19 @@
+---
+title: "Assignment 2 Task 2 - Parameter Estimation with Purrr - Lizards Length to
+  Weight"
+author: "Katherine Rosencrance"
+date: "2023-02-14"
+output:
+  html_document: 
+    code_folding: hide
+---
+# Overview
+
+# Setup
+```{r setup, echo = TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Attach packages
+
+
+```
