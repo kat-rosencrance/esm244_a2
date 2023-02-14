@@ -14,6 +14,136 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Attach packages
+library(tidyverse)
+library(here)
+library(purrr)
+library(kableExtra)
 
 
 ```
+
+```{r}
+# Read in the data
+lizards <- read_csv(here("data", "lizards.csv"))
+```
+
+# Fit a snout length to weight model of the following form to all lizards in your dataframe.
+\begin{equation}
+\hat{W}=a(SVL)^b
+\end{equation}
+
+### Step one: Select Model (already done for us)
+```{r}
+# create a function in R using given model
+func1 <- function(a,b,length){
+ out= a*(length^b)
+return(out)
+}
+```
+
+### Step two: Initial Guess (by running standard OLS)
+```{r}
+# run OLS regression on log transformed data
+my_guess_model <- lm(log(lizards$weight) ~ log(lizards$SV_length), data = lizards)
+
+# get coefficients
+coefficients(my_guess_model)
+# (Intercept) log(lizards$SV_length) 
+#  -8.256862               2.479417
+
+# mathematically transform the intercept coefficient to get the guess for parameter a
+b <- my_guess_model$coefficients[2]
+a <- exp((my_guess_model$coefficients[1]))
+```
+
+### Step three: Run NLS
+```{r}
+lizard_nls <- nls(weight~func1(a,b,SV_length),
+                  data=lizards,
+                  start=list(a = a, b=b),
+                  trace=TRUE)
+
+summary(lizard_nls)
+broom::tidy(lizard_nls) %>% 
+  kable(caption = "Table 1: Original NLS Results") %>% 
+  kable_classic()
+```
+```{r}
+# Make a predict based on the model
+
+lizard_predict<-lizards %>% 
+  mutate(predict=predict(lizard_nls,newdata=.))
+
+ggplot(data=lizard_predict)+
+  geom_point(aes(x= SV_length,y= weight, color = sex))+
+  labs(x = "Snout-Vent Length (mm)",
+      y = "Body Weight (g)",
+      title = "NLS Data Predictions")+
+    geom_smooth(aes(x=SV_length,y=predict), color='black') +
+  scale_color_manual(values= c("chocolate1", "coral3"))+
+  theme_minimal()
+```
+**Figure 1: NLS Data Prediction** Snout-vent length (mm) and body weight (g) for male and female lizards sampled from Jornada Basin LTER site. The red color represents males and the females are orange. The black line shows the predicted data using non-linear least squares to estimate parameters. 
+
+# Western Whiptail lizard NLS (*Cnemidophorus tigrisatus*)
+```{r}
+whip_lizard <- lizards %>% 
+  filter(spp == "CNTI", sex == "M")
+```
+
+### Step one: Select model (already done for us)
+```{r}
+# create a function in R using given model
+func1 <- function(a,b,length){
+ out= a*(length^b)
+return(out)
+}
+```
+
+### Step two: Initial Guess (by running standard OLS)
+```{r}
+# run OLS regression on log transformed data
+my_guess_model_whip <- lm(log(whip_lizard$weight) ~ log(whip_lizard$SV_length), data = whip_lizard)
+
+# get coefficients
+coefficients(my_guess_model_whip)
+# (Intercept) log(lizards$SV_length) 
+#  -9.023963             2.698108
+
+# mathematically transform the intercept coefficient to get the guess for parameter a
+b_whip <- my_guess_model_whip$coefficients[2]
+a_whip <- exp((my_guess_model_whip$coefficients[1]))
+```
+
+### Step three: Run NLS
+```{r}
+whip_lizard_nls <- nls(weight~func1(a,b,SV_length),
+                  data=whip_lizard,
+                  start=list(a = a_whip, b=b_whip),
+                  trace=TRUE)
+
+summary(whip_lizard_nls)
+broom::tidy(whip_lizard_nls) %>% 
+  kable(caption = "Table 2: NLS Results for Male Western Whiptail Lizard Subset") %>% 
+  kable_classic()
+```
+### Make a predict based on the model
+```{r}
+whip_lizard_predict<-whip_lizard %>% 
+  mutate(predict=predict(whip_lizard_nls,newdata=.))
+
+ggplot(data=whip_lizard_predict)+
+  geom_point(aes(x= SV_length,y= weight))+
+  labs(x = "Snout-Vent Length (mm)",
+      y = "Body Weight (g)",
+      title = "NLS Data Predictions")+
+    geom_smooth(show.legend = TRUE, aes(x = SV_length,y = predict), color = "darkorange2") +
+  geom_smooth(data = lizard_predict, show.legend = TRUE, aes(x = SV_length, y = predict), color = "darkslategray") +
+  scale_colour_manual(name= "legend",values=c("darkorange2", "darkslategray")) +
+  scale_linetype_discrete(labels=c("NLS All Data", "NLS Whiptail"))+
+  theme_minimal()
+```
+
+# Citation
+
+**Data Citation:** Lightfoot, D. and W.G. Whitford. 2020. Lizard pitfall trap data from 11 NPP study locations at the Jornada Basin LTER site, 1989-2006 ver 37. Environmental Data Initiative. https://doi.org/10.6073/pasta/4a6e258fb49c31e222ecbbcfd128967f
