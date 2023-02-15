@@ -69,7 +69,7 @@ broom::tidy(lizard_nls) %>%
   kable_classic()
 ```
 ```{r}
-# Make a predict based on the model
+# Make a prediction based on the model
 
 lizard_predict<-lizards %>% 
   mutate(predict=predict(lizard_nls,newdata=.))
@@ -127,7 +127,7 @@ broom::tidy(whip_lizard_nls) %>%
   kable(caption = "Table 2: NLS Results for Male Western Whiptail Lizard Subset") %>% 
   kable_classic()
 ```
-### Make a predict based on the model
+### Make a prediction based on the model
 ```{r}
 whip_lizard_predict<-whip_lizard %>% 
   mutate(predict=predict(whip_lizard_nls,newdata=.))
