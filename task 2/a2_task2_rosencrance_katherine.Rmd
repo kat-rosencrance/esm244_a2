@@ -8,7 +8,7 @@ output:
     code_folding: hide
 ---
 # Overview
-
+This report explores parameters of a length to weight model for lizard populations in New Mexico. Data were collected from 1989-2006 using pitfall traps at Jornada Basin LTER. Variables measured include species, sex, recapture status, snout-vent length, total length, weight, and whether tail is broken or whole (Lightfoot et al., 2020). This analysis will compare nonlinear least squares models for all lizard species and a subset of male Western Whiptail lizard (*Cnemidophorus tigrisatus*). 
 # Setup
 ```{r setup, echo = TRUE, warning = FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
@@ -16,8 +16,8 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # Attach packages
 library(tidyverse)
 library(here)
-library(purrr)
 library(kableExtra)
+library(Metrics)
 
 
 ```
@@ -27,7 +27,7 @@ library(kableExtra)
 lizards <- read_csv(here("data", "lizards.csv"))
 ```
 
-# Fit a snout length to weight model of the following form to all lizards in your dataframe.
+# All Species: Fitting a Snout-vent Length to Weight Model
 \begin{equation}
 \hat{W}=a(SVL)^b
 \end{equation}
@@ -63,11 +63,12 @@ lizard_nls <- nls(weight~func1(a,b,SV_length),
                   start=list(a = a, b=b),
                   trace=TRUE)
 
-summary(lizard_nls)
+#summary(lizard_nls)
 broom::tidy(lizard_nls) %>% 
   kable(caption = "Table 1: Original NLS Results") %>% 
   kable_classic()
 ```
+# Make a Prediction
 ```{r}
 # Make a prediction based on the model
 
@@ -79,10 +80,12 @@ ggplot(data=lizard_predict)+
   labs(x = "Snout-Vent Length (mm)",
       y = "Body Weight (g)",
       title = "NLS Data Predictions")+
-    geom_smooth(aes(x=SV_length,y=predict), color='black') +
+  geom_line(aes(x=SV_length,y=predict), color='black') +
   scale_color_manual(values= c("chocolate1", "coral3"))+
-  theme_minimal()
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
 ```
+
 **Figure 1: NLS Data Prediction** Snout-vent length (mm) and body weight (g) for male and female lizards sampled from Jornada Basin LTER site. The red color represents males and the females are orange. The black line shows the predicted data using non-linear least squares to estimate parameters. 
 
 # Western Whiptail lizard NLS (*Cnemidophorus tigrisatus*)
@@ -122,12 +125,12 @@ whip_lizard_nls <- nls(weight~func1(a,b,SV_length),
                   start=list(a = a_whip, b=b_whip),
                   trace=TRUE)
 
-summary(whip_lizard_nls)
+#summary(whip_lizard_nls)
 broom::tidy(whip_lizard_nls) %>% 
   kable(caption = "Table 2: NLS Results for Male Western Whiptail Lizard Subset") %>% 
   kable_classic()
 ```
-### Make a prediction based on the model
+# Make a prediction based on the model
 ```{r}
 whip_lizard_predict<-whip_lizard %>% 
   mutate(predict=predict(whip_lizard_nls,newdata=.))
@@ -137,12 +140,23 @@ ggplot(data=whip_lizard_predict)+
   labs(x = "Snout-Vent Length (mm)",
       y = "Body Weight (g)",
       title = "NLS Data Predictions")+
-    geom_smooth(show.legend = TRUE, aes(x = SV_length,y = predict), color = "darkorange2") +
-  geom_smooth(data = lizard_predict, show.legend = TRUE, aes(x = SV_length, y = predict), color = "darkslategray") +
-  scale_colour_manual(name= "legend",values=c("darkorange2", "darkslategray")) +
-  scale_linetype_discrete(labels=c("NLS All Data", "NLS Whiptail"))+
-  theme_minimal()
+    geom_line(aes(x = SV_length,y = predict,color="male")) +
+  geom_line(data = lizard_predict, aes(x = SV_length, y = predict,color="all")) +
+  scale_colour_manual(name= "legend",values=c("male"="darkorange2","all"= "darkslategray")) +
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+
+# calculate RMSE for both models
+#function for RMSE
+
+rmselizard <- rmse(lizard_predict$weight, lizard_predict$predict)
+
+rmsewhiplizard <- rmse(whip_lizard_predict$weight, whip_lizard_predict$predict)
+
+
 ```
+
+**Figure 1: Western Whiptail Lizard NLS Model vs. All Species NLS model** Snout-vent length (mm) and body weight (g) for male western whiptail lizards sampled from Jornada Basin LTER site. The orange line represents the NLS predictions for just the specific species of males and the black line shows the predicted data using NLS for all species and sexes. The RMSE for the species specific male NLS model is `r round(rmsewhiplizard, 5)`  and the RMSE for the all species model is ` r round(rmselizard, 5)`. Because it has a lower root-mean square error, the model with all species should be used to predict the data.  
 
 # Citation
 

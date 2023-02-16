@@ -5,6 +5,7 @@ date: "2023-02-12"
 output:
   html_document: 
     code_folding: hide
+    theme: cerulean
 ---
 
 # Overview
@@ -44,7 +45,8 @@ palmetto <- palmetto %>%
 
 # Create a subset with the data we need
  palmetto_subset <- palmetto %>% 
-   select(species, height:green_lvs)
+   select(species, height:green_lvs) %>% 
+   drop_na()
  
 # Convert species to a factor, check to make sure it worked
 palmetto_subset$species <- as.factor(palmetto_subset$species)
@@ -175,9 +177,10 @@ bictab(list(palmetto_blr1, palmetto_blr2)) %>%
 ## 10-fold Cross Validation
 ```{r}
 # 10 fold cross validation
-## set seed for reproducibility! here to set the folds
+## set seed for reproducibility!
 set.seed(345)
 
+# set folds
 tidy_folds <- vfold_cv(palmetto_subset, v = 10)
 #tidy_folds
 
@@ -232,6 +235,16 @@ Based on the AIC and BIC values, as well as the 10-fold cross validation, model 
 
 ```{r}
 # use the entire dataset, rather than testing/training sets, to identify the coefficients for the final predictive model, based on model 1 (lowest AIC and BIC)
+blr_tidyfit_f1 <- blr_model %>% 
+  fit(f1, data = palmetto_subset)
+
+coefficient_df <- blr_tidyfit_f1 %>% 
+  tidy() %>% 
+  kable(col.names = c("Term", "Estimate","Standard Error", "Statistic", "P-Value"),
+        caption = "Table 7: Coefficients for Final Predictive Model") %>% 
+  kable_classic(position = "center")
+
+coefficient_df
 
 ```
 
@@ -250,7 +263,7 @@ blr1_fitted <- palmetto_blr1 %>%
 #create table
 palmetto_table <- blr1_fitted %>% 
   select(species, correct_prediction) %>% 
-  pivot_wider(names_from = correct_prediction, values_from = correct_prediction, values_fn = list(correct_prediction = length)) %>% 
+  pivot_wider(names_from = correct_prediction, values_from = correct_prediction, values_fn =   list(correct_prediction = length)) %>% 
   mutate(percent_correctly_classified= yes/(yes+no)*100)
 
 nice_palmetto_table<- palmetto_table %>% 
