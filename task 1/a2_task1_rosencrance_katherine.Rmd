@@ -5,7 +5,7 @@ date: "2023-02-12"
 output:
   html_document: 
     code_folding: hide
-    theme: cerulean
+    theme: cosmo
 ---
 
 # Overview
@@ -181,7 +181,7 @@ bictab(list(palmetto_blr1, palmetto_blr2)) %>%
 set.seed(345)
 
 # set folds
-tidy_folds <- vfold_cv(palmetto_subset, v = 10)
+tidy_folds <- vfold_cv(palmetto_subset, v = 10, repeats =5)
 #tidy_folds
 
 ## use a workflow that bundles the logistic model and a formula
